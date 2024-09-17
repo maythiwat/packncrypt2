@@ -1,14 +1,15 @@
+import crypto from 'node:crypto'
+import { readdirSync, lstatSync, unlinkSync } from 'node:fs'
+import path from 'node:path'
+import { hrtime } from 'node:process'
+
 import * as Clack from '@clack/prompts'
+import { globSync } from 'fast-glob'
 import color from 'picocolors'
 import prettyBytes from 'pretty-bytes'
-import { globSync } from 'fast-glob'
-
-import { readdirSync, lstatSync, unlinkSync } from 'node:fs'
-import crypto from 'node:crypto'
-import path from 'node:path'
 
 import { cipherStream, gzipStream } from './stream'
-import { percentage } from './utils'
+import { percentage, hrtimeToSeconds } from './utils'
 
 const main = async () => {
   Clack.intro(color.inverse(' Pack \'n  Crypt! '))
@@ -90,6 +91,7 @@ const main = async () => {
 
     const s = Clack.spinner()
 
+    const t1 = hrtime()
     s.start('File compression')
 
     const doNext = await gzipStream(
@@ -101,7 +103,8 @@ const main = async () => {
       }
     )
       .then(() => {
-        s.stop('File compression, completed.')
+        const elapsed = hrtimeToSeconds(hrtime(t1))
+        s.stop(`File compression, completed in ${elapsed}s.`)
         return true
       })
       .catch(() => {
@@ -112,6 +115,7 @@ const main = async () => {
       })
 
     if (doNext) {
+      const t2 = hrtime()
       s.start('File encryption')
 
       const ok = await cipherStream(
@@ -124,7 +128,8 @@ const main = async () => {
       )
         .then(() => {
           unlinkSync(String(target) + '.xaz.01')
-          s.stop('File encryption, completed.')
+          const elapsed = hrtimeToSeconds(hrtime(t2))
+          s.stop(`File encryption, completed in ${elapsed}s.`)
           return true
         })
         .catch(() => {
@@ -149,6 +154,8 @@ const main = async () => {
     const cipher = crypto.createDecipheriv('aes-256-cbc', key, iv)
     
     const s = Clack.spinner()
+
+    const t1 = hrtime()
     s.start('File decryption')
 
     const doNext = await cipherStream(
@@ -160,7 +167,8 @@ const main = async () => {
       }
     )
       .then(() => {
-        s.stop('File decryption, completed.')
+        const elapsed = hrtimeToSeconds(hrtime(t1))
+        s.stop(`File decryption, completed in ${elapsed}s.`)
         return true
       })
       .catch((e) => {
@@ -171,6 +179,7 @@ const main = async () => {
       })
 
     if (doNext) {
+      const t2 = hrtime()
       s.start('File decompression')
 
       const ok = await gzipStream(
@@ -183,7 +192,8 @@ const main = async () => {
       )
         .then(() => {
           unlinkSync(targetOut + '.xaz.01')
-          s.stop('File decompression, completed.')
+          const elapsed = hrtimeToSeconds(hrtime(t2))
+          s.stop(`File decompression, completed in ${elapsed}s.`)
           return true
         })
         .catch(() => {
