@@ -74,14 +74,23 @@ const main = async () => {
     process.exit(0)
   }
 
+  const keyString = await Clack.password({
+    message: `Enter ${mode}ion key (left blank for default)`,
+  })
+
+  if (Clack.isCancel(keyString)) {
+    Clack.cancel('User canceled an operation')
+    process.exit(0)
+  }
+
+  const keyHash = crypto.createHash('sha512').update(keyString ?? '').digest('hex')
+  const key = keyHash.substring(0, 32)
+  const iv = keyHash.substring(48, 64)
+
   if (mode == 'encrypt') {
     const fullSize = lstatSync(target as string).size
 
-    const cipher = crypto.createCipheriv(
-      'aes-256-cbc',
-      'bf3c199c2470cb477d907b1e0917c17b',
-      '5183666c72eec9e4'
-    )
+    const cipher = crypto.createCipheriv('aes-256-cbc', key, iv)
 
     const s = Clack.spinner()
 
@@ -100,6 +109,7 @@ const main = async () => {
       })
       .catch(() => {
         unlinkSync(String(target) + '.xaz.01')
+        s.stop('File compression, aborted.')
         Clack.cancel('Failed to compress a file')
         return false
       })
@@ -123,6 +133,7 @@ const main = async () => {
         .catch(() => {
           unlinkSync(String(target) + '.xaz.01')
           unlinkSync(String(target) + '.xap')
+          s.stop('File encryption, aborted.')
           Clack.cancel('Failed to encrypt a file')
           return false
         })
@@ -138,11 +149,7 @@ const main = async () => {
     const parsedFn = path.parse(String(target).replace(/\.xaz$/, ''))
     const targetOut = path.join(parsedFn.dir, `${parsedFn.name}-${Math.round(new Date().getTime() / 1000)}`)
 
-    const cipher = crypto.createDecipheriv(
-      'aes-256-cbc',
-      'bf3c199c2470cb477d907b1e0917c17b',
-      '5183666c72eec9e4'
-    )
+    const cipher = crypto.createDecipheriv('aes-256-cbc', key, iv)
     
     const s = Clack.spinner()
     s.start('File decryption')
@@ -159,9 +166,10 @@ const main = async () => {
         s.stop('File decryption, completed.')
         return true
       })
-      .catch(() => {
+      .catch((e) => {
         unlinkSync(targetOut + '.xaz.01')
-        Clack.cancel('Failed to decrypt a file')
+        s.stop('File decryption, aborted.')
+        Clack.cancel(typeof e == 'string' ? e : 'Failed to decrypt a file')
         return false
       })
 
@@ -182,6 +190,7 @@ const main = async () => {
         })
         .catch(() => {
           unlinkSync(targetOut + parsedFn.ext)
+          s.stop('File decompression, aborted.')
           Clack.cancel('Failed to decompress a file')
           return false
         })

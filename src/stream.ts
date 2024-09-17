@@ -17,10 +17,15 @@ export const cipherStream = (
   })
 
   inputStream.on('close', () => {
-    outputStream.write(cipher.final())
-    outputStream.close()
-    onProgress(inputStream.bytesRead)
-    resolve(true)
+    try {
+      outputStream.write(cipher.final())
+      outputStream.close()
+      onProgress(inputStream.bytesRead)
+      resolve(true)
+    }catch(e){
+      outputStream.close()
+      reject('Invalid decryption key')
+    }
   })
 
   inputStream.on('error', (e) => {
