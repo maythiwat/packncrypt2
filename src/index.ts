@@ -1,18 +1,14 @@
 import * as Clack from '@clack/prompts'
 import color from 'picocolors'
-import { readdirSync, lstatSync, unlinkSync } from 'node:fs'
-import crypto from 'node:crypto'
 import prettyBytes from 'pretty-bytes'
 import { globSync } from 'fast-glob'
-import path from 'node:path'
-import { compressFile, cipherStream, decompressFile } from './stream'
 
-const percentage = (max: number, val: number) => {
-  return ((val / max) * 100).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-}
+import { readdirSync, lstatSync, unlinkSync } from 'node:fs'
+import crypto from 'node:crypto'
+import path from 'node:path'
+
+import { cipherStream, gzipStream } from './stream'
+import { percentage } from './utils'
 
 const main = async () => {
   Clack.intro(color.inverse(' Pack \'n  Crypt! '))
@@ -96,7 +92,8 @@ const main = async () => {
 
     s.start('File compression')
 
-    const doNext = await compressFile(
+    const doNext = await gzipStream(
+      'zip',
       String(target),
       String(target) + '.xaz.01',
       (bytesRead) => {
@@ -176,7 +173,8 @@ const main = async () => {
     if (doNext) {
       s.start('File decompression')
 
-      const ok = await decompressFile(
+      const ok = await gzipStream(
+        'unzip',
         targetOut + '.xaz.01',
         targetOut + parsedFn.ext,
         (bytesRead) => {

@@ -1,4 +1,4 @@
-import { Cipher } from 'crypto'
+import type { Cipher } from 'crypto'
 import { createReadStream, createWriteStream } from 'fs'
 import { createGunzip, createGzip } from 'zlib'
 
@@ -34,39 +34,14 @@ export const cipherStream = (
   })
 })
 
-export const compressFile = (
+export const gzipStream = (
+  mode: 'zip' | 'unzip',
   input: string,
   output: string,
   onProgress: (bytesRead: number) => void = () => {}
 ) => new Promise((resolve, reject) => {
-  const inputStream = createReadStream(input).pipe(createGzip())
+  const inputStream = createReadStream(input).pipe(mode == 'zip' ? createGzip() : createGunzip())
   const outputStream = createWriteStream(output)
-
-  inputStream.on('data', (c: Buffer) => {
-    outputStream.write(c)
-    onProgress(inputStream.bytesWritten)
-  })
-
-  inputStream.on('close', () => {
-    outputStream.close()
-    onProgress(inputStream.bytesWritten)
-    resolve(true)
-  })
-
-  inputStream.on('error', (e) => {
-    outputStream.destroy(e)
-    reject(e)
-  })
-})
-
-export const decompressFile = (
-  input: string,
-  output: string,
-  onProgress: (bytesRead: number) => void = () => {}
-) => new Promise((resolve, reject) => {
-  
-  const outputStream = createWriteStream(output)
-  const inputStream = createReadStream(input).pipe(createGunzip())
 
   inputStream.on('data', (c: Buffer) => {
     outputStream.write(c)
