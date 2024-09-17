@@ -4,7 +4,7 @@
     "dev": "tsx ./src",
     "bundle": "rimraf dist && tsup",
     "build": "powershell ./build.ps1",
-    "start": ".\\bin\\main.exe",
+    "start": ".\\bin\\app.exe",
     "package": "npm run bundle && npm run build",
     "debug": "npm run package && npm run start"
   },
